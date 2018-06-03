@@ -19,11 +19,11 @@ type IwPlugin struct {
 }
 
 var iwDevHeaderPattern = regexp.MustCompile(
-	`^\s+Interface (\w+)`,
+	`^\s+Interface ([\w\.]+)`,
 )
 
 var iwDevStationDumpHeaderPattern = regexp.MustCompile(
-	`^Station ([0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5}) \(on \w+\)`,
+	`^Station ([0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5}) \(on [\w\.]+\)`,
 )
 
 var iwDevStationDumpRxBytesPattern = regexp.MustCompile(
@@ -38,8 +38,11 @@ var iwDevStationDumpInactiveTimePattern = regexp.MustCompile(
 	`^\s+inactive time:\s+(\d+)\s+ms`,
 )
 
-var iwDevStationDumpSignalDbmPattern = regexp.MustCompile(
-	`^\s+signal:\s+(-\d+)\s*\[-\d+,\s*-\d+\]\s*dBm`,
+var iwDevStationDumpSignalDbmPattern1 = regexp.MustCompile(
+	`^\s+signal:\s+(-?\d+)\s*\[(-\d+),\s*(-\d+)\]\s*dBm`,
+)
+var iwDevStationDumpSignalDbmPattern2 = regexp.MustCompile(
+	`^\s+signal:\s+(-?\d+)\s*dBm`,
 )
 
 // MetricKeyPrefix interface for PluginWithPrefix
@@ -127,7 +130,8 @@ func (p IwPlugin) FetchMetrics() (map[string]interface{}, error) {
 				}
 			}
 		}
-		metrics["interface."+ifName+".connected"] = uint64(cnt)
+		normalizedIfName := strings.Replace(ifName, ".", "_", -1)
+		metrics["interface."+normalizedIfName+".connected"] = uint64(cnt)
 	}
 	return metrics, nil
 }
@@ -187,7 +191,15 @@ func parseIwDevStationDump(out string) map[string]map[string]int64 {
 			stats[macaddr]["txBytes"], _ = strconv.ParseInt(matches[1], 10, 64)
 		} else if matches := iwDevStationDumpInactiveTimePattern.FindStringSubmatch(line); matches != nil {
 			stats[macaddr]["inactiveMsec"], _ = strconv.ParseInt(matches[1], 10, 64)
-		} else if matches := iwDevStationDumpSignalDbmPattern.FindStringSubmatch(line); matches != nil {
+		} else if matches := iwDevStationDumpSignalDbmPattern1.FindStringSubmatch(line); matches != nil {
+			v1, _ := strconv.ParseInt(matches[2], 10, 64)
+			v2, _ := strconv.ParseInt(matches[3], 10, 64)
+			if v1 <= v2 {
+				stats[macaddr]["signalDbm"] = v2
+			} else {
+				stats[macaddr]["signalDbm"] = v1
+			}
+		} else if matches := iwDevStationDumpSignalDbmPattern2.FindStringSubmatch(line); matches != nil {
 			stats[macaddr]["signalDbm"], _ = strconv.ParseInt(matches[1], 10, 64)
 		}
 	}

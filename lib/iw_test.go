@@ -7,13 +7,20 @@ import (
 
 func TestParseIwDev(t *testing.T) {
 	stub := `phy#1
+	Interface wlan1.sta2
+		ifindex 11
+		wdev 0x100000003
+		addr 00:00:5e:e8:df:ab
+		type AP/VLAN
+		channel 44 (5220 MHz), width: 40 MHz, center1: 5230 MHz
+		txpower 14.00 dBm
 	Interface wlan1
 		ifindex 10
 		wdev 0x100000002
 		addr 00:00:5e:e8:df:ab
 		ssid SSID_n
 		type AP
-		channel 36 (5180 MHz), width: 40 MHz, center1: 5190 MHz
+		channel 44 (5220 MHz), width: 40 MHz, center1: 5230 MHz
 		txpower 14.00 dBm
 phy#0
 	Interface wlan0
@@ -26,7 +33,7 @@ phy#0
 		txpower 10.00 dBm`
 
 	interfaces := parseIwDev(stub)
-	expected := []string{"wlan1", "wlan0"}
+	expected := []string{"wlan1.sta2", "wlan1", "wlan0"}
 	if !reflect.DeepEqual(expected, interfaces) {
 		t.Errorf("Expected %#v, got %#v", expected, interfaces)
 	}
@@ -67,8 +74,8 @@ Station 00:00:5e:11:88:2e (on wlan1)
 	tx retries:	10161
 	tx failed:	365
 	rx drop misc:	20
-	signal:  	-65 [-70, -67] dBm
-	signal avg:	-65 [-69, -67] dBm
+	signal:  	-65 dBm
+	signal avg:	-65 dBm
 	tx bitrate:	6.0 MBit/s
 	rx bitrate:	6.0 MBit/s
 	expected throughput:	53.557Mbps
@@ -90,7 +97,7 @@ Station 00:00:5e:11:88:2e (on wlan1)
 			"rxBytes":      6216368,
 			"txBytes":      4006367,
 			"inactiveMsec": 1600,
-			"signalDbm":    -50,
+			"signalDbm":    -49,
 		},
 		"00-00-5e-11-88-2e": map[string]int64{
 			"rxBytes":      12219038,
